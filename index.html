@@ -3,190 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Конёк-Горбунок: Эволюция Царства</title>
+    <title>Конёк-Горбунок: Механика Авось</title>
     <style>
         body {
-            background-color: #1a1a24;
-            color: #f0e6d2;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            user-select: none;
+            background-color: #12121a; color: #f0e6d2; font-family: 'Segoe UI', Tahoma, sans-serif;
+            text-align: center; margin: 0; padding: 20px; user-select: none;
         }
-        h1 {
-            color: #ffd700;
-            text-shadow: 0 0 10px #ff8c00;
+        #story-panel {
+            background: #2a1a1a; border: 2px solid #ff4500; padding: 15px; border-radius: 10px;
+            margin-bottom: 20px; font-style: italic; color: #ffd700; font-size: 18px;
         }
-        #resource-display {
-            font-size: 28px;
-            margin: 20px 0;
-            font-weight: bold;
+        .resources {
+            display: flex; justify-content: center; gap: 40px; font-size: 24px; font-weight: bold; margin-bottom: 30px;
         }
-        /* Главная кнопка-кликер */
+        .res-item span { color: #ff8c00; }
+        
         #click-area {
-            background: radial-gradient(circle, #ff8c00, #8b0000);
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 30px #ff4500;
-            transition: transform 0.05s, box-shadow 0.1s;
-            position: relative;
-            border: 4px solid #ffd700;
+            background: radial-gradient(circle, #ff8c00, #8b0000); width: 220px; height: 220px;
+            border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 0 40px #ff4500;
+            transition: transform 0.05s; border: 4px solid #ffd700; position: relative;
         }
-        #click-area:active {
-            transform: scale(0.95);
-            box-shadow: 0 0 10px #ff4500;
+        #click-area:active { transform: scale(0.92); }
+        
+        .shop { display: flex; justify-content: center; gap: 15px; margin-top: 30px; flex-wrap: wrap; }
+        .card {
+            background: #222; border: 2px solid #555; border-radius: 10px; padding: 15px; width: 220px;
+            transition: border-color 0.2s;
         }
-        /* Магазин улучшений */
-        .shop {
-            margin-top: 40px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
+        .card:hover { border-color: #ffd700; }
+        .btn {
+            background: #ff4500; color: white; border: none; padding: 10px 15px; margin-top: 10px;
+            border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;
         }
-        .upgrade-btn {
-            background: #2a2a35;
-            border: 2px solid #ffd700;
-            color: #fff;
-            padding: 15px 25px;
-            font-size: 16px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .upgrade-btn:hover {
-            background: #3a3a45;
-        }
-        .upgrade-btn:disabled {
-            background: #1a1a20;
-            border-color: #555;
-            color: #777;
-            cursor: not-allowed;
-        }
-        /* Анимация всплывающих цифр */
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .btn-merge { background: #800080; } /* Пурпурная кнопка для магии */
+        
         .floating-text {
-            position: absolute;
-            color: #ffd700;
-            font-size: 24px;
-            font-weight: bold;
-            pointer-events: none;
-            animation: floatUp 1s ease-out forwards;
-            text-shadow: 0 0 5px #000;
+            position: absolute; color: #ffd700; font-size: 24px; font-weight: bold;
+            pointer-events: none; animation: floatUp 1s ease-out forwards;
         }
-        @keyframes floatUp {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
-        }
+        .floating-feather { color: #ff00ff; }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <h1>Конёк-Горбунок: Путь Царя</h1>
-    
-    <div id="resource-display">
-        Пшеница: <span id="wheat-count">0</span> 🌾<br>
-        <span style="font-size: 16px; color: #aaa;">Добыча в сек: <span id="auto-count">0</span></span>
+    <div id="story-panel">📜 Указ Царя: Собери 50 пшеницы, чтобы выманить волшебную Кобылицу!</div>
+
+    <div class="resources">
+        <div class="res-item">🌾 Пшеница: <span id="wheat">0</span> <br><small style="font-size: 14px" id="stats">В сек: 0 | За клик: 1</small></div>
+        <div class="res-item">🪶 Перья: <span id="feathers">0</span></div>
     </div>
 
-    <div id="click-area" onclick="clickAction(event)">
-        СОБРАТЬ<br>ПШЕНИЦУ!
-    </div>
+    <div id="click-area" onclick="clickAction(event)">РУБИТЬ<br>ПШЕНИЦУ</div>
 
     <div class="shop">
-        <button id="buy-konok-btn" class="upgrade-btn" onclick="buyKonok()">
-            🐎 Нанять Конька-Горбунка <br>
-            Цена: <span id="konok-cost">10</span> 🌾 <br>
-            (+1 🌾/сек)
-        </button>
+        <div class="card">
+            <h3>💪 Сила Ивана</h3>
+            <p>Усиливает клик (+1)</p>
+            <button class="btn" id="buy-ivan" onclick="buyIvan()">Цена: <span id="ivan-cost">20</span> 🌾</button>
+        </div>
+        <div class="card">
+            <h3>🐎 Конёк-Горбунок</h3>
+            <p>Авто-сбор (+2/сек)</p>
+            <button class="btn" id="buy-konok" onclick="buyKonok()">Цена: <span id="konok-cost">50</span> 🌾</button>
+        </div>
+        <div class="card">
+            <h3>✨ Слияние (Merge)</h3>
+            <p>Соедини 5 перьев в Огненный Хвост (Доход x2)</p>
+            <button class="btn btn-merge" id="buy-merge" onclick="mergeFeathers()">Слить перья!</button>
+        </div>
     </div>
 
     <script>
-        // Игровые переменные
-        let wheat = 0;
-        let clickPower = 1;
-        let autoWheat = 0;
-        let konokCost = 10;
-        let konokCount = 0;
+        // Игровые данные
+        let data = { wheat: 0, feathers: 0, clickPower: 1, autoPower: 0, multiplier: 1, storyStage: 0 };
+        let costs = { ivan: 20, konok: 50 };
 
-        // Элементы интерфейса
-        const wheatEl = document.getElementById('wheat-count');
-        const autoEl = document.getElementById('auto-count');
-        const konokBtn = document.getElementById('buy-konok-btn');
-        const konokCostEl = document.getElementById('konok-cost');
+        const ui = {
+            wheat: document.getElementById('wheat'), feathers: document.getElementById('feathers'),
+            stats: document.getElementById('stats'), story: document.getElementById('story-panel'),
+            ivanBtn: document.getElementById('buy-ivan'), konokBtn: document.getElementById('buy-konok'),
+            mergeBtn: document.getElementById('buy-merge')
+        };
 
-        // Функция клика игроком
-        function clickAction(event) {
-            wheat += clickPower;
-            updateUI();
-            createFloatingText(event, `+${clickPower}`);
+        function clickAction(e) {
+            let amount = data.clickPower * data.multiplier;
+            data.wheat += amount;
+            createFloater(e, `+${amount}🌾`);
+            
+            // Механика дропа перьев (10% шанс)
+            if (Math.random() < 0.10) {
+                data.feathers++;
+                createFloater(e, `+1 🪶`, true);
+            }
+            checkStory(); updateUI();
         }
 
-        // Покупка авто-помощника (Конька)
+        function buyIvan() {
+            if (data.wheat >= costs.ivan) {
+                data.wheat -= costs.ivan; data.clickPower += 1;
+                costs.ivan = Math.floor(costs.ivan * 1.5); updateUI();
+            }
+        }
+
         function buyKonok() {
-            if (wheat >= konokCost) {
-                wheat -= konokCost;
-                autoWheat += 1;
-                konokCount += 1;
-                // Увеличиваем цену следующего Конька на 15%
-                konokCost = Math.floor(konokCost * 1.15); 
+            if (data.wheat >= costs.konok) {
+                data.wheat -= costs.konok; data.autoPower += 2;
+                costs.konok = Math.floor(costs.konok * 1.5); updateUI();
+            }
+        }
+
+        function mergeFeathers() {
+            if (data.feathers >= 5) {
+                data.feathers -= 5;
+                data.multiplier *= 2; // Умножаем весь доход на 2
+                ui.story.innerHTML = "🔥 ВАУ! Ты создал Огненный Хвост! Весь доход удвоен!";
+                ui.story.style.color = "#ff4500";
                 updateUI();
             }
         }
 
-        // Автоматический сбор (Игровой цикл)
         setInterval(() => {
-            if (autoWheat > 0) {
-                wheat += autoWheat;
-                updateUI();
+            if (data.autoPower > 0) {
+                data.wheat += (data.autoPower * data.multiplier);
+                checkStory(); updateUI();
             }
-        }, 1000); // Срабатывает каждую секунду
+        }, 1000);
 
-        // Обновление цифр на экране
+        function checkStory() {
+            if (data.wheat >= 50 && data.storyStage === 0) {
+                ui.story.innerHTML = "🐎 Кобылица поймана! Теперь она дает перья. Копи на Конька!";
+                data.storyStage = 1;
+            } else if (data.autoPower > 0 && data.storyStage === 1) {
+                ui.story.innerHTML = "👑 Царь в гневе! Соедини 5 перьев, чтобы удивить его.";
+                data.storyStage = 2;
+            }
+        }
+
         function updateUI() {
-            wheatEl.innerText = wheat;
-            autoEl.innerText = autoWheat;
-            konokCostEl.innerText = konokCost;
+            ui.wheat.innerText = data.wheat; ui.feathers.innerText = data.feathers;
+            ui.stats.innerText = `В сек: ${data.autoPower * data.multiplier} | За клик: ${data.clickPower * data.multiplier}`;
             
-            // Проверка, хватает ли денег на кнопку
-            if (wheat >= konokCost) {
-                konokBtn.disabled = false;
-            } else {
-                konokBtn.disabled = true;
-            }
+            document.getElementById('ivan-cost').innerText = costs.ivan;
+            document.getElementById('konok-cost').innerText = costs.konok;
+            
+            ui.ivanBtn.disabled = data.wheat < costs.ivan;
+            ui.konokBtn.disabled = data.wheat < costs.konok;
+            ui.mergeBtn.disabled = data.feathers < 5;
         }
 
-        // Создание всплывающих цифр для "дофаминового" эффекта
-        function createFloatingText(e, text) {
-            const clickArea = document.getElementById('click-area');
-            const rect = clickArea.getBoundingClientRect();
-            
+        function createFloater(e, text, isFeather = false) {
+            const area = document.getElementById('click-area');
+            const rect = area.getBoundingClientRect();
             const floater = document.createElement('div');
-            floater.className = 'floating-text';
+            floater.className = 'floating-text' + (isFeather ? ' floating-feather' : '');
             floater.innerText = text;
-            
-            // Позиционируем там, где был клик мышкой
-            floater.style.left = (e.clientX - rect.left) + 'px';
+            floater.style.left = (e.clientX - rect.left + (Math.random() * 40 - 20)) + 'px';
             floater.style.top = (e.clientY - rect.top) + 'px';
-            
-            clickArea.appendChild(floater);
-            
-            // Удаляем элемент после завершения анимации
-            setTimeout(() => {
-                floater.remove();
-            }, 1000);
+            area.appendChild(floater);
+            setTimeout(() => floater.remove(), 1000);
         }
 
-        // Инициализация
         updateUI();
     </script>
-
 </body>
 </html>
