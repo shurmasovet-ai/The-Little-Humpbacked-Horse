@@ -2,261 +2,146 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Конёк-Горбунок: Дикое Царство</title>
+    <title>Конёк-Горбунок 3D: Начало</title>
     <style>
-        body { 
-            margin: 0; background: #111; color: #fff; font-family: 'Courier New', Courier, monospace; 
-            display: flex; flex-direction: column; align-items: center; user-select: none;
-        }
-        #game-container { position: relative; margin-top: 15px; }
-        canvas { background: #558B2F; border: 4px solid #3E2723; border-radius: 10px; box-shadow: 0 0 30px #000; }
+        /* Убираем отступы, чтобы игра была на весь экран */
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, sans-serif; }
         
-        /* Интерфейс */
-        #ui-top { 
-            position: absolute; top: 10px; left: 10px; right: 10px; 
-            display: flex; justify-content: space-between; pointer-events: none; text-shadow: 1px 1px 2px #000;
+        /* Игровой интерфейс поверх 3D */
+        #ui { 
+            position: absolute; top: 10px; left: 10px; color: white; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none;
         }
-        .bar-bg { width: 150px; height: 15px; background: #333; border: 2px solid #fff; border-radius: 5px; margin-bottom: 5px; overflow: hidden; }
-        #hp-bar { height: 100%; background: #e53935; width: 100%; transition: width 0.2s; }
-        #energy-bar { height: 100%; background: #1e88e5; width: 100%; transition: width 0.2s; }
+        h1 { margin: 0; font-size: 24px; color: #FFD700; }
+        p { margin: 5px 0 0 0; font-size: 16px; }
         
-        #inventory { background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; border: 1px solid #ffd700; }
-        
-        #time-display { font-size: 20px; font-weight: bold; color: #ffd700; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 5px;}
-
-        /* Диалоги */
-        #dialogue-box { 
-            position: absolute; bottom: 20px; left: 50px; right: 50px; background: rgba(20, 10, 0, 0.9); 
-            border: 3px solid #ffb300; padding: 20px; border-radius: 10px; display: none; text-align: left;
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.5); font-size: 24px; pointer-events: none;
         }
-        #dialogue-name { color: #ffb300; margin: 0 0 10px 0; font-size: 22px; }
-        #dialogue-text { font-size: 18px; line-height: 1.4; margin-bottom: 15px;}
-        .btn { background: #ffb300; color: #000; border: none; padding: 8px 15px; font-weight: bold; cursor: pointer; border-radius: 5px;}
-        .btn:hover { background: #ffa000; }
-
-        #controls-hint { margin-top: 10px; color: #aaa; text-align: center; font-size: 14px; }
     </style>
+    <!-- Подключаем движок Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <div id="ui-top">
-            <div>
-                <div style="font-weight: bold; margin-bottom: 5px;">Иван</div>
-                <div class="bar-bg"><div id="hp-bar"></div></div>
-                <div class="bar-bg"><div id="energy-bar"></div></div>
-            </div>
-            <div id="time-display">ДЕНЬ (12:00)</div>
-            <div id="inventory">
-                🌾 Пшеница: <span id="inv-wheat">0</span><br>
-                🪵 Дерево: <span id="inv-wood">0</span>
-            </div>
-        </div>
-
-        <div id="dialogue-box">
-            <h3 id="dialogue-name">Имя</h3>
-            <div id="dialogue-text">Текст</div>
-            <button class="btn" onclick="closeDialogue()">Продолжить</button>
-        </div>
+    <div id="ui">
+        <h1>Славянское 3D-Выживание</h1>
+        <p>Управление: <b>W</b> - Вперед, <b>S</b> - Назад, <b>A / D</b> - Повороты влево/вправо</p>
     </div>
-
-    <div id="controls-hint">
-        <b>Стрелочки / WASD</b> - Бег | <b>Пробел</b> - Говорить / Рубить лес | <b>[ F ]</b> - Развести костёр (нужно 3 дерева)
-    </div>
+    <div id="crosshair">+</div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // --- СОСТОЯНИЕ ИГРЫ ---
-        let gameTime = 12; // 0 до 24
-        let isNight = false;
-        let keys = {};
-        let inDialogue = false;
+        // 1. НАСТРОЙКА СЦЕНЫ И КАМЕРЫ
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Голубое небо
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 100); // Легкий туман вдалеке
 
-        const player = { x: 400, y: 300, size: 20, speed: 4, hp: 100, maxHp: 100, energy: 100, maxEnergy: 100, inv: { wheat: 0, wood: 0 } };
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // Объекты на карте
-        const npcs = [
-            { id: 'tsar', name: 'Царь', x: 700, y: 100, size: 30, color: '#e53935', dialog: 'Эй, дурак! Сруби мне деревья на новый терем! Принеси 10 дров, иначе велю казнить!' },
-            { id: 'konok', name: 'Конёк-Горбунок', x: 100, y: 100, size: 25, color: '#8d6e63', dialog: 'Иванушка, ночью в лесу страшно! Волки бродят. Наруби дров и нажми [F], чтобы разжечь костёр, он спасет нас и восстановит силы!' }
-        ];
-        
-        let trees = [];
-        let wheats = [];
-        let wolves = [];
-        let campfires = [];
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true; // Включаем тени
+        document.body.appendChild(renderer.domElement);
 
-        // Генерация ресурсов
-        for(let i=0; i<15; i++) trees.push({ x: Math.random()*750+20, y: Math.random()*550+20, hp: 3 });
-        for(let i=0; i<20; i++) wheats.push({ x: Math.random()*750+20, y: Math.random()*550+20 });
+        // 2. ОСВЕЩЕНИЕ (Солнце)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Базовый свет
+        scene.add(ambientLight);
 
-        // --- УПРАВЛЕНИЕ ---
-        window.addEventListener('keydown', e => {
-            keys[e.code] = true;
-            if(e.code === 'Space') interact();
-            if(e.code === 'KeyF') buildCampfire();
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        sunLight.position.set(50, 100, 50);
+        sunLight.castShadow = true; // Солнце отбрасывает тени
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 200;
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+        scene.add(sunLight);
+
+        // 3. ЗЕМЛЯ (Поляна)
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x558B2F }); // Зеленая трава
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2; // Кладем плоскость горизонтально
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 4. СОЗДАНИЕ ГЛАВНОГО ГЕРОЯ (ИВАН)
+        const player = new THREE.Group(); // Группа, чтобы объединить модель и камеру
+        scene.add(player);
+        player.position.y = 1;
+
+        // "Моделька" Ивана (пока синий куб)
+        const bodyGeo = new THREE.BoxGeometry(2, 2, 2);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5 });
+        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+        bodyMesh.castShadow = true;
+        player.add(bodyMesh);
+
+        // Настраиваем камеру (Вид от 3-го лица)
+        // Камера висит сзади (-Z) и чуть сверху (+Y)
+        camera.position.set(0, 4, 8); 
+        camera.lookAt(player.position);
+        player.add(camera); // Прикрепляем камеру к Ивану!
+
+        // 5. ГЕНЕРАЦИЯ ЛЕСА (Препятствия)
+        const treeMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 }); // Листва
+        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 }); // Ствол
+
+        for (let i = 0; i < 40; i++) {
+            // Случайные координаты
+            const x = (Math.random() - 0.5) * 150;
+            const z = (Math.random() - 0.5) * 150;
+
+            // Ствол
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), trunkMat);
+            trunk.position.set(x, 1.5, z);
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            scene.add(trunk);
+
+            // Крона (Конус)
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5), treeMat);
+            leaves.position.set(x, 4.5, z);
+            leaves.castShadow = true;
+            scene.add(leaves);
+        }
+
+        // 6. УПРАВЛЕНИЕ ИВАНОМ
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // Адаптация экрана при изменении размера окна
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
-        window.addEventListener('keyup', e => keys[e.code] = false);
 
-        function interact() {
-            if (inDialogue) { closeDialogue(); return; }
+        // 7. ИГРОВОЙ ЦИКЛ (Анимация и Физика)
+        const moveSpeed = 0.15;
+        const rotateSpeed = 0.04;
 
-            // Поговорить с NPC
-            for (let npc of npcs) {
-                if (getDist(player, npc) < 50) {
-                    openDialogue(npc.name, npc.dialog);
-                    return;
-                }
-            }
+        function animate() {
+            requestAnimationFrame(animate);
 
-            // Рубить дерево или собирать пшеницу
-            for (let i = 0; i < trees.length; i++) {
-                if (getDist(player, trees[i]) < 40) {
-                    trees[i].hp--;
-                    player.energy -= 5;
-                    if (trees[i].hp <= 0) {
-                        player.inv.wood += 1;
-                        trees.splice(i, 1);
-                        updateUI();
-                    }
-                    return;
-                }
-            }
+            // Логика перемещения (Танковое управление)
+            // W / S - Движение вперед и назад по направлению взгляда
+            if (keys['KeyW']) { player.translateZ(-moveSpeed); }
+            if (keys['KeyS']) { player.translateZ(moveSpeed); }
             
-            for (let i = 0; i < wheats.length; i++) {
-                if (getDist(player, wheats[i]) < 40) {
-                    player.inv.wheat += 1;
-                    wheats.splice(i, 1);
-                    updateUI();
-                    return;
-                }
-            }
+            // A / D - Вращение игрока вокруг своей оси (камера крутится вместе с ним)
+            if (keys['KeyA']) { player.rotation.y += rotateSpeed; }
+            if (keys['KeyD']) { player.rotation.y -= rotateSpeed; }
+
+            // Отрисовка кадра
+            renderer.render(scene, camera);
         }
 
-        function buildCampfire() {
-            if (player.inv.wood >= 3) {
-                player.inv.wood -= 3;
-                campfires.push({ x: player.x, y: player.y, life: 1000 }); // Костер горит время
-                updateUI();
-            }
-        }
-
-        // --- ЛОГИКА ИГРЫ ---
-        function update() {
-            if (inDialogue || player.hp <= 0) return;
-
-            // Движение
-            let moved = false;
-            if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) { player.y -= player.speed; moved = true; }
-            if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.size) { player.y += player.speed; moved = true; }
-            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) { player.x -= player.speed; moved = true; }
-            if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.size) { player.x += player.speed; moved = true; }
-
-            if (moved && player.energy > 0) player.energy -= 0.05;
-
-            // Время суток
-            gameTime += 0.005; // Скорость времени
-            if (gameTime >= 24) gameTime = 0;
-            isNight = (gameTime > 19 || gameTime < 5);
-
-            // Спавн волков ночью
-            if (isNight && wolves.length < 5 && Math.random() < 0.01) {
-                wolves.push({ x: Math.random() < 0.5 ? 0 : canvas.width, y: Math.random() * canvas.height, speed: 1.5 });
-            }
-            if (!isNight && wolves.length > 0) wolves.pop(); // Волки уходят утром
-
-            // Логика волков
-            for (let i = wolves.length - 1; i >= 0; i--) {
-                let w = wolves[i];
-                let nearFire = campfires.some(f => getDist(w, f) < 100);
-                
-                if (nearFire) {
-                    // Убегают от огня
-                    w.x += (w.x > player.x) ? w.speed : -w.speed;
-                    w.y += (w.y > player.y) ? w.speed : -w.speed;
-                } else {
-                    // Преследуют Ивана
-                    if (w.x < player.x) w.x += w.speed; else w.x -= w.speed;
-                    if (w.y < player.y) w.y += w.speed; else w.y -= w.speed;
-                    
-                    if (getDist(player, w) < 20) player.hp -= 0.5; // Укус
-                }
-            }
-
-            // Костры и лечение
-            for (let i = campfires.length - 1; i >= 0; i--) {
-                campfires[i].life--;
-                if (campfires[i].life <= 0) campfires.splice(i, 1);
-                else if (getDist(player, campfires[i]) < 80) {
-                    player.energy = Math.min(player.maxEnergy, player.energy + 0.2);
-                    player.hp = Math.min(player.maxHp, player.hp + 0.1);
-                }
-            }
-
-            updateUI();
-        }
-
-        // --- ОТРИСОВКА ---
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Ресурсы
-            trees.forEach(t => { ctx.fillStyle = '#3E2723'; ctx.fillRect(t.x-5, t.y, 10, 20); ctx.fillStyle = '#2E7D32'; ctx.beginPath(); ctx.arc(t.x, t.y, 15, 0, Math.PI*2); ctx.fill(); });
-            wheats.forEach(w => { ctx.fillStyle = '#FFD54F'; ctx.fillRect(w.x-2, w.y-5, 4, 10); });
-
-            // NPC
-            npcs.forEach(n => { ctx.fillStyle = n.color; ctx.fillRect(n.x - n.size/2, n.y - n.size/2, n.size, n.size); });
-            // Царская корона
-            ctx.fillStyle = '#FFD700'; ctx.fillRect(npcs[0].x - 10, npcs[0].y - 25, 20, 10);
-
-            // Костры
-            campfires.forEach(f => {
-                ctx.fillStyle = '#FF5722'; ctx.beginPath(); ctx.arc(f.x, f.y-5, 10 + Math.random()*5, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#795548'; ctx.fillRect(f.x-10, f.y, 20, 5);
-                ctx.fillStyle = 'rgba(255, 152, 0, 0.2)'; ctx.beginPath(); ctx.arc(f.x, f.y, 100, 0, Math.PI*2); ctx.fill(); // Зона света
-            });
-
-            // Иван
-            ctx.fillStyle = '#1E88E5'; ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill();
-            
-            // Волки
-            wolves.forEach(w => { ctx.fillStyle = '#424242'; ctx.fillRect(w.x-10, w.y-10, 20, 20); ctx.fillStyle = 'red'; ctx.fillRect(w.x-5, w.y-5, 4, 4); ctx.fillRect(w.x+5, w.y-5, 4, 4); });
-
-            // Ночь (Освещение)
-            if (isNight) {
-                ctx.fillStyle = `rgba(0, 0, 20, ${Math.min(0.7, Math.abs(gameTime - 12)/12)})`;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-
-            // Смерть
-            if (player.hp <= 0) {
-                ctx.fillStyle = 'rgba(100, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff'; ctx.font = '40px Arial'; ctx.fillText('ВЫ ПОГИБЛИ', 270, 300);
-            }
-        }
-
-        // --- УТИЛИТЫ ---
-        function getDist(obj1, obj2) { return Math.sqrt(Math.pow(obj1.x - obj2.x, 2) + Math.pow(obj1.y - obj2.y, 2)); }
-        function openDialogue(name, text) { document.getElementById('dialogue-name').innerText = name; document.getElementById('dialogue-text').innerText = text; document.getElementById('dialogue-box').style.display = 'block'; inDialogue = true; }
-        function closeDialogue() { document.getElementById('dialogue-box').style.display = 'none'; inDialogue = false; player.y += 5; } // Отскок, чтобы не залипнуть
-
-        function updateUI() {
-            document.getElementById('hp-bar').style.width = player.hp + '%';
-            document.getElementById('energy-bar').style.width = player.energy + '%';
-            document.getElementById('inv-wheat').innerText = player.inv.wheat;
-            document.getElementById('inv-wood').innerText = player.inv.wood;
-            
-            let hours = Math.floor(gameTime);
-            let mins = Math.floor((gameTime - hours) * 60);
-            document.getElementById('time-display').innerText = `${isNight ? 'НОЧЬ' : 'ДЕНЬ'} (${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')})`;
-            document.getElementById('time-display').style.color = isNight ? '#90caf9' : '#ffd700';
-        }
-
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
-        loop();
+        // Запуск
+        animate();
     </script>
 </body>
 </html>
