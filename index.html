@@ -2,145 +2,177 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Конёк-Горбунок 3D: Начало</title>
+    <title>Конёк-Горбунок 3D: Русский Лес</title>
     <style>
-        /* Убираем отступы, чтобы игра была на весь экран */
         body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        
-        /* Игровой интерфейс поверх 3D */
-        #ui { 
-            position: absolute; top: 10px; left: 10px; color: white; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none;
-        }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none; }
         h1 { margin: 0; font-size: 24px; color: #FFD700; }
         p { margin: 5px 0 0 0; font-size: 16px; }
-        
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: rgba(255, 255, 255, 0.5); font-size: 24px; pointer-events: none;
-        }
     </style>
-    <!-- Подключаем движок Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="ui">
         <h1>Славянское 3D-Выживание</h1>
-        <p>Управление: <b>W</b> - Вперед, <b>S</b> - Назад, <b>A / D</b> - Повороты влево/вправо</p>
+        <p>Управление: <b>W, A, S, D</b></p>
     </div>
-    <div id="crosshair">+</div>
 
     <script>
-        // 1. НАСТРОЙКА СЦЕНЫ И КАМЕРЫ
+        // 1. СЦЕНА И ОСВЕЩЕНИЕ
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Голубое небо
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 100); // Легкий туман вдалеке
+        scene.background = new THREE.Color(0x7ec0ee); // Светлое небо
+        scene.fog = new THREE.Fog(0x7ec0ee, 10, 80); 
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true; // Включаем тени
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // 2. ОСВЕЩЕНИЕ (Солнце)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Базовый свет
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-
         const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sunLight.position.set(50, 100, 50);
-        sunLight.castShadow = true; // Солнце отбрасывает тени
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 200;
-        sunLight.shadow.camera.left = -50;
-        sunLight.shadow.camera.right = 50;
-        sunLight.shadow.camera.top = 50;
-        sunLight.shadow.camera.bottom = -50;
+        sunLight.position.set(30, 50, 30);
+        sunLight.castShadow = true;
         scene.add(sunLight);
 
-        // 3. ЗЕМЛЯ (Поляна)
-        const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshLambertMaterial({ color: 0x558B2F }); // Зеленая трава
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2; // Кладем плоскость горизонтально
+        // 2. ЗЕМЛЯ
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshLambertMaterial({ color: 0x4caf50 })
+        );
+        ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // 4. СОЗДАНИЕ ГЛАВНОГО ГЕРОЯ (ИВАН)
-        const player = new THREE.Group(); // Группа, чтобы объединить модель и камеру
+        // 3. СОБИРАЕМ ИВАНА ИЗ "БЛОКОВ"
+        const player = new THREE.Group();
         scene.add(player);
-        player.position.y = 1;
+        
+        // Материалы одежды
+        const skinMat = new THREE.MeshLambertMaterial({ color: 0xffccaa }); // Кожа
+        const shirtMat = new THREE.MeshLambertMaterial({ color: 0xcc0000 }); // Красная рубаха
+        const pantsMat = new THREE.MeshLambertMaterial({ color: 0x1976d2 }); // Синие штаны
+        const hatMat = new THREE.MeshLambertMaterial({ color: 0xb71c1c }); // Темно-красная шапка
 
-        // "Моделька" Ивана (пока синий куб)
-        const bodyGeo = new THREE.BoxGeometry(2, 2, 2);
-        const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5 });
-        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-        bodyMesh.castShadow = true;
-        player.add(bodyMesh);
+        // Голова
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), skinMat);
+        head.position.y = 2.4;
+        head.castShadow = true;
+        player.add(head);
 
-        // Настраиваем камеру (Вид от 3-го лица)
-        // Камера висит сзади (-Z) и чуть сверху (+Y)
-        camera.position.set(0, 4, 8); 
-        camera.lookAt(player.position);
-        player.add(camera); // Прикрепляем камеру к Ивану!
+        // Шапка (Конус)
+        const hat = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.7, 4), hatMat);
+        hat.position.y = 3.1;
+        hat.rotation.y = Math.PI / 4;
+        hat.castShadow = true;
+        player.add(hat);
 
-        // 5. ГЕНЕРАЦИЯ ЛЕСА (Препятствия)
-        const treeMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 }); // Листва
-        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 }); // Ствол
+        // Туловище (Рубаха)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.5), shirtMat);
+        body.position.y = 1.4;
+        body.castShadow = true;
+        player.add(body);
+
+        // Ноги (создаем отдельно, чтобы потом анимировать шаги)
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4), pantsMat);
+        legL.position.set(-0.25, 0.4, 0);
+        legL.castShadow = true;
+        player.add(legL);
+
+        const legR = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4), pantsMat);
+        legR.position.set(0.25, 0.4, 0);
+        legR.castShadow = true;
+        player.add(legR);
+
+        // Камера сзади Ивана
+        camera.position.set(0, 4, 7);
+        camera.lookAt(0, 1.5, 0);
+        player.add(camera);
+
+        // 4. СТРУКТУРИРОВАННЫЙ ЛЕС (Русские Ели)
+        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4e342e }); // Ствол
+        const leafMat = new THREE.MeshLambertMaterial({ color: 0x1b5e20 }); // Темная хвоя
 
         for (let i = 0; i < 40; i++) {
-            // Случайные координаты
             const x = (Math.random() - 0.5) * 150;
             const z = (Math.random() - 0.5) * 150;
 
-            // Ствол
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), trunkMat);
-            trunk.position.set(x, 1.5, z);
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
-            scene.add(trunk);
+            const tree = new THREE.Group();
 
-            // Крона (Конус)
-            const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5), treeMat);
-            leaves.position.set(x, 4.5, z);
-            leaves.castShadow = true;
-            scene.add(leaves);
+            // Ствол
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2), trunkMat);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            tree.add(trunk);
+
+            // Нижний ярус веток
+            const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(2, 3, 5), leafMat);
+            leaves1.position.y = 2.5;
+            leaves1.castShadow = true;
+            tree.add(leaves1);
+
+            // Средний ярус
+            const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.5, 5), leafMat);
+            leaves2.position.y = 4;
+            leaves2.castShadow = true;
+            tree.add(leaves2);
+
+            // Верхний ярус (макушка)
+            const leaves3 = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 5), leafMat);
+            leaves3.position.y = 5.5;
+            leaves3.castShadow = true;
+            tree.add(leaves3);
+
+            tree.position.set(x, 0, z);
+            scene.add(tree);
         }
 
-        // 6. УПРАВЛЕНИЕ ИВАНОМ
+        // 5. УПРАВЛЕНИЕ
         const keys = {};
         window.addEventListener('keydown', (e) => keys[e.code] = true);
         window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        // Адаптация экрана при изменении размера окна
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // 7. ИГРОВОЙ ЦИКЛ (Анимация и Физика)
+        // 6. АНИМАЦИЯ И ФИЗИКА
         const moveSpeed = 0.15;
-        const rotateSpeed = 0.04;
+        const rotateSpeed = 0.05;
+        let walkTime = 0; // Время для расчета анимации шагов
 
         function animate() {
             requestAnimationFrame(animate);
 
-            // Логика перемещения (Танковое управление)
-            // W / S - Движение вперед и назад по направлению взгляда
-            if (keys['KeyW']) { player.translateZ(-moveSpeed); }
-            if (keys['KeyS']) { player.translateZ(moveSpeed); }
-            
-            // A / D - Вращение игрока вокруг своей оси (камера крутится вместе с ним)
+            let isMoving = false;
+
+            if (keys['KeyW']) { player.translateZ(-moveSpeed); isMoving = true; }
+            if (keys['KeyS']) { player.translateZ(moveSpeed); isMoving = true; }
             if (keys['KeyA']) { player.rotation.y += rotateSpeed; }
             if (keys['KeyD']) { player.rotation.y -= rotateSpeed; }
 
-            // Отрисовка кадра
+            // Анимация шагов (двигаем ноги туда-сюда по синусоиде)
+            if (isMoving) {
+                walkTime += 0.2;
+                legL.rotation.x = Math.sin(walkTime) * 0.5;
+                legR.rotation.x = Math.sin(walkTime + Math.PI) * 0.5; // Правая нога в противофазе
+                
+                // Легкое покачивание тела при ходьбе
+                body.rotation.z = Math.sin(walkTime) * 0.05; 
+            } else {
+                // Если стоим, возвращаем ноги прямо
+                legL.rotation.x = 0;
+                legR.rotation.x = 0;
+                body.rotation.z = 0;
+            }
+
             renderer.render(scene, camera);
         }
 
-        // Запуск
         animate();
     </script>
 </body>
